@@ -1,0 +1,86 @@
+# plane-unlimited — user deployment
+# Uses ${...} values from .env (copy .env.example to .env first).
+#
+# Author: wufflyne <wufflyne@proton.me> — wufflyne.com
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: plane
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: plane
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plane"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis:/data
+
+  mq:
+    image: rabbitmq:4-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: plane
+      RABBITMQ_DEFAULT_PASS: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      RABBITMQ_DEFAULT_VHOST: plane
+    volumes:
+      - mq:/var/lib/rabbitmq
+      # Plane declares transient non-exclusive classic queues, which RabbitMQ
+      # >= 4.1 rejects by default (silo / live-exporter crash-looped).
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+
+  # localstack:latest now requires a license (container exited 55 with
+  # "License activation failed"). Pinned localstack/localstack:4 is the free
+  # community image (S3 included, no auth token); the init hook below
+  # creates the 'plane' bucket on first boot.
+  localstack:
+    image: localstack/localstack:4
+    environment:
+      SERVICES: s3
+      # Silence LocalStack's own usage telemetry (periodic HTTPS calls to AWS).
+      DISABLE_EVENTS: "1"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - s3:/var/lib/localstack
+      - ./localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
+
+  plane:
+    image: ${PLANE_IMAGE:-wufflyne/plane-unlimited:stable}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8090}:80"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:?set DOMAIN_NAME in .env}
+      SITE_ADDRESS: ":80"
+      APP_PROTOCOL: http
+      DATABASE_URL: postgres://plane:${DB_PASSWORD}@db:5432/plane
+      REDIS_URL: redis://redis:6379/0
+      AMQP_URL: amqp://plane:${DB_PASSWORD}@mq:5672/plane
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_S3_BUCKET_NAME: plane
+      AWS_S3_ENDPOINT_URL: http://localstack:4566
+      # Route uploads/downloads through the Plane API proxy so the browser
+      # never needs to reach the S3 endpoint directly.
+      USE_STORAGE_PROXY: "1"
+      # SECRET_KEY must be set in .env (see .env.example for how to generate one).
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      # keep image defaults for IS_AIRGAPPED / PRIME_HOST / PAYMENT_SERVER_BASE_URL
+    volumes:
+      - plane_data:/app/data
+
+volumes:
+  db:
+  redis:
+  mq:
+  s3:
+  plane_data:
