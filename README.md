@@ -147,6 +147,12 @@ registration path.
 - See `docs/LEGAL.md` before redistributing: the base image is Plane's
   closed-source commercial edition.
 
+## License
+
+Scripts, patches and docs in this repo are MIT (see `LICENSE.md`). Plane and
+the commercial base image are © Plane.so / Makeplane under their own terms;
+this project is unofficial and not affiliated with Plane.
+
 ---
 
 Built by [wufflyne](https://wufflyne.com).
