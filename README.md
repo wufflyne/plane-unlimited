@@ -127,9 +127,10 @@ The god-mode sign-up page enforces a strong password policy (length and
 character mix). Use a long generated password, e.g. `openssl rand -base64 18`.
 
 **My instance is on a non-standard port and links/emails point at the wrong URL.**
-`DOMAIN_NAME` must include the port when it isn't the default, e.g.
-`DOMAIN_NAME=myhost.example.com:8090` (still no scheme). With `WEB_PORT=80`
-a bare hostname is fine.
+`DOMAIN_NAME` must be a bare hostname or IP (no scheme, no port) — the startup
+script validates it. Use `WEB_PORT` for the port. With a non-standard port a
+few god-mode form redirects can land on port 80; re-open the page on your
+port — the app itself is unaffected.
 
 **How do I know it's really offline?**
 The stack makes no outbound connections — this was verified with packet
