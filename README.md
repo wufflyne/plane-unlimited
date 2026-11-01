@@ -50,8 +50,7 @@ docker compose up -d
 
 The build downloads `makeplane/plane-aio-commercial:stable`, swaps the
 license trust anchors, installs the seed command and applies the UI/RabbitMQ
-patches. `scripts/build.sh [tag]` builds any tag; `v4.0.1`, `stable` and
-`latest` are the published release tags.
+patches. `scripts/build.sh [tag]` builds any tag; `stable` is the published release tag.
 
 ## Configuration
 
